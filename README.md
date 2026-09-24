@@ -1,47 +1,112 @@
-# UNI ADMIN — Organización Académica Personal
+<div align="center">
 
-Dashboard personal para organizar tu vida universitaria: horarios, tareas,
-repositorio de PDFs, enlaces rápidos, notas, profesores y estudiantes.
+  # 🎓 Mi Espacio — UNI_ADMIN
+  **Dashboard de Organización Académica Personal**
 
-**URL:** https://uni-admin.vercel.app
+  Un sistema integral, moderno y responsive diseñado para centralizar la vida universitaria, gestionar horarios, tareas, calificaciones, recursos y contactos en tiempo real.
 
-**Stack:** React 19 · Vite · Tailwind CSS · Supabase · React Router
+  [![React](https://img.shields.io/badge/React-19.0-61DAFB?style=for-the-badge&logo=react&logoColor=black)](https://react.dev/)
+  [![Vite](https://img.shields.io/badge/Vite-6.0-646CFF?style=for-the-badge&logo=vite&logoColor=white)](https://vitejs.dev/)
+  [![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS-3.4-38BDF8?style=for-the-badge&logo=tailwind-css&logoColor=white)](https://tailwindcss.com/)
+  [![Supabase](https://img.shields.io/badge/Supabase-Database_%26_Auth-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)](https://supabase.com/)
+  [![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)](#licencia)
 
----
+  [Explorar Funcionalidades](#-características) • [Instalación](#-instalación) • [Configuración de Base de Datos](#-base-de-datos--supabase) • [Estructura](#-estructura-del-proyecto)
 
-## Requisitos
-
-- Node.js 18+
-- Un proyecto en [Supabase](https://supabase.com)
-
----
-
-## Instalación
-
-```bash
-git clone https://github.com/TU_USUARIO/TU_REPO.git
-cd TU_REPO
-npm install
-```
-
-### Variables de entorno
-
-Crea un archivo `.env.local` en la raíz:
-
-```env
-VITE_SUPABASE_URL=https://TU-PROYECTO.supabase.co
-VITE_SUPABASE_ANON_KEY=TU_ANON_KEY
-```
-
-> Encuentras ambos valores en **Supabase → Project Settings → API**.
+</div>
 
 ---
 
-## Base de datos
+## 📑 Índice
+- [Acerca del Proyecto](#-acerca-del-proyecto)
+- [Características](#-características)
+- [Stack Tecnológico](#-stack-tecnológico)
+- [Requisitos Previos](#-requisitos-previos)
+- [Instalación](#-instalación)
+- [Base de Datos & Supabase](#-base-de-datos--supabase)
+  - [Tablas SQL](#1-creación-de-tablas)
+  - [Políticas de Seguridad (RLS)](#2-seguridad-y-permisos-rls)
+  - [Almacenamiento de Archivos (Storage)](#3-configuración-de-storage-pdfs)
+- [Estructura del Proyecto](#-estructura-del-proyecto)
+- [Licencia](#-licencia)
 
-En el **SQL Editor de Supabase**, ejecuta:
+---
+
+## 🚀 Acerca del Proyecto
+
+**UNI_ADMIN / Mi Espacio** es un dashboard académico en tiempo real pensado para estudiantes que buscan optimizar su tiempo y llevar un control total de su rendimiento académico. Permite sincronizar calendarios, calcular un promedio ponderado de calificaciones, gestionar repositorios de archivos PDF y organizar tareas con prioridades.
+
+---
+
+## ✨ Características
+
+| Módulo | Descripción |
+| :--- | :--- |
+| 📅 **Horarios y Exámenes** | Gestión visual de la agenda semanal, aulas, profesores y fechas clave de exámenes. |
+| 📝 **Mis Tareas** | Control de entregas por prioridad (alta, media, baja) y materias asociadas. |
+| 📁 **Repositorio PDF** | Subida y descarga directa de documentos, guías y libros desde Supabase Storage. |
+| 🧮 **Calculadora de Notas** | Seguimiento de evaluaciones con ponderación porcentual y proyección de promedios. |
+| 🔗 **Enlaces Rápidos** | Accesos directos organizados por materia a aulas virtuales, drives y recursos. |
+| 👥 **Profesores y Estudiantes** | Directorio de contactos con correo, teléfono y detalles académicos. |
+| 🔐 **Autenticación y RLS** | Rutas protegidas y seguridad a nivel de filas mediante Supabase Auth. |
+| 📱 **Diseño Responsive** | Interfaz adaptada a dispositivos móviles, tablets y escritorio. |
+
+---
+
+## 🛠️ Stack Tecnológico
+
+- **Frontend:** [React 19](https://react.dev/), [React Router](https://reactrouter.com/)
+- **Estilos:** [Tailwind CSS](https://tailwindcss.com/)
+- **Build Tool:** [Vite](https://vitejs.dev/)
+- **Backend & BaaS:** [Supabase](https://supabase.com/) (PostgreSQL, Authentication, Storage, Realtime)
+
+---
+
+## 📋 Requisitos Previos
+
+Asegúrate de contar con lo siguiente instalado en tu entorno local:
+
+- **Node.js**: Versión `18.0.0` o superior
+- **npm** / **pnpm** / **yarn**
+- Una cuenta activa en [Supabase](https://supabase.com) con un proyecto creado.
+
+---
+
+## 💻 Instalación
+
+1. **Clonar el repositorio:**
+   ```bash
+   git clone https://github.com/TU_USUARIO/TU_REPO.git
+   cd TU_REPO
+   ```
+
+2. **Instalar dependencias:**
+   ```bash
+   npm install
+   ```
+
+3. **Configurar variables de entorno:**
+   Crea un archivo `.env.local` en la raíz del proyecto y añade tus credenciales de Supabase:
+   ```env
+   VITE_SUPABASE_URL=https://TU-PROYECTO.supabase.co
+   VITE_SUPABASE_ANON_KEY=TU_ANON_KEY
+   ```
+
+4. **Iniciar el servidor de desarrollo:**
+   ```bash
+   npm run dev
+   ```
+
+---
+
+## 🗄️ Base de Datos & Supabase
+
+Abre el **SQL Editor** en tu panel de control de Supabase y ejecuta las siguientes sentencias para estructurar tu base de datos:
+
+### 1. Creación de Tablas
 
 ```sql
+-- Tabla de Horarios
 create table if not exists horarios (
   id uuid primary key default gen_random_uuid(),
   materia text not null,
@@ -52,6 +117,7 @@ create table if not exists horarios (
   aula text
 );
 
+-- Tabla de Tareas
 create table if not exists tareas (
   id uuid primary key default gen_random_uuid(),
   titulo text not null,
@@ -61,6 +127,7 @@ create table if not exists tareas (
   descripcion text
 );
 
+-- Tabla de Repositorio
 create table if not exists repositorio (
   id uuid primary key default gen_random_uuid(),
   titulo text not null,
@@ -69,6 +136,7 @@ create table if not exists repositorio (
   archivo_url text not null
 );
 
+-- Tabla de Enlaces
 create table if not exists enlaces (
   id uuid primary key default gen_random_uuid(),
   materia text not null,
@@ -77,6 +145,7 @@ create table if not exists enlaces (
   url text not null
 );
 
+-- Tabla de Evaluaciones
 create table if not exists evaluaciones (
   id uuid primary key default gen_random_uuid(),
   materia text not null,
@@ -85,6 +154,7 @@ create table if not exists evaluaciones (
   nota numeric
 );
 
+-- Tabla de Exámenes
 create table if not exists examenes (
   id uuid primary key default gen_random_uuid(),
   materia text not null,
@@ -93,6 +163,7 @@ create table if not exists examenes (
   aula text
 );
 
+-- Tabla de Profesores
 create table if not exists profesores (
   id uuid primary key default gen_random_uuid(),
   nombre text not null,
@@ -102,6 +173,7 @@ create table if not exists profesores (
   especialidad text
 );
 
+-- Tabla de Estudiantes
 create table if not exists estudiantes (
   id uuid primary key default gen_random_uuid(),
   nombre text not null,
@@ -113,7 +185,9 @@ create table if not exists estudiantes (
 );
 ```
 
-### Permisos y RLS
+### 2. Seguridad y Permisos (RLS)
+
+Aplica el siguiente bloque PL/pgSQL para habilitar **Row Level Security (RLS)** y asignar permisos sobre todas las tablas:
 
 ```sql
 do $$
@@ -139,17 +213,19 @@ begin
 end $$;
 ```
 
-### Storage (PDFs)
+### 3. Configuración de Storage (PDFs)
 
-1. Crea un bucket público llamado `pdfs-repositorio`.
-2. En **Storage → Policies** agrega:
+1. En Supabase, ve a **Storage** y crea un bucket **público** llamado: `pdfs-repositorio`.
+2. En **Storage → Policies**, agrega las siguientes políticas:
 
 ```sql
+-- Permitir lectura pública de archivos
 create policy "public read"
   on storage.objects for select
   to anon
   using (bucket_id = 'pdfs-repositorio');
 
+-- Permitir subida pública de archivos
 create policy "public upload"
   on storage.objects for insert
   to anon
@@ -158,82 +234,40 @@ create policy "public upload"
 
 ---
 
-## Ejecutar en local
+## 📁 Estructura del Proyecto
 
-```bash
-npm run dev
-```
-
-Abre [http://localhost:5173](http://localhost:5173).
-
----
-
-## Scripts
-
-| Comando           | Descripción              |
-|-------------------|--------------------------|
-| `npm run dev`     | Servidor de desarrollo   |
-| `npm run build`   | Build de producción      |
-| `npm run preview` | Vista previa del build   |
-| `npm run lint`    | Lint (oxlint)            |
-
----
-
-## Funcionalidades
-
-- **Inicio** — métricas, próximo examen con cuenta regresiva
-- **Horario semanal** — vista por días (mobile) y grilla (desktop)
-- **Tareas** — prioridades, fechas de entrega, filtros
-- **Repositorio** — subir PDFs a Storage o enlazar URLs externas
-- **Enlaces rápidos** — Moodle, Drive, Zoom, WhatsApp por materia
-- **Calculadora de notas** — proyección de promedio 0–20 / 0–100
-- **Profesores y estudiantes** — directorio con búsqueda
-- **Auth** — login/registro con Supabase Auth y rutas protegidas
-- **Responsive** — mobile-first con sidebar colapsable
-
----
-
-## Estructura
-
-```
+```text
 src/
-├── components/ProtectedRoute.jsx
-├── contexts/AuthContext.jsx
-├── layouts/AdminLayout.jsx
+├── components/
+│   └── ProtectedRoute.jsx   # Control de acceso e inicio de sesión
+├── contexts/
+│   └── AuthContext.jsx      # Proveedor global de autenticación
+├── layouts/
+│   └── AdminLayout.jsx      # Layout principal con navegación y sidebar
 ├── pages/
-│   ├── Login.jsx
-│   ├── Home.jsx
-│   ├── Horarios.jsx
-│   ├── MisTareas.jsx
-│   ├── Repositorio.jsx
-│   ├── Enlaces.jsx
-│   ├── CalculadoraNotas.jsx
-│   ├── Profesores.jsx
-│   └── Estudiantes.jsx
-├── supabase/client.js
-└── utils/materiaColors.js
+│   ├── Login.jsx            # Vista de inicio de sesión
+│   ├── Home.jsx             # Dashboard principal / Resumen
+│   ├── Horarios.jsx         # Gestión de horarios académicos
+│   ├── MisTareas.jsx        # Lista de tareas y prioridades
+│   ├── Repositorio.jsx      # Gestión y descarga de PDFs
+│   ├── Enlaces.jsx          # Accesos directos y enlaces de interés
+│   ├── CalculadoraNotas.jsx # Calculadora de promedio y ponderaciones
+│   ├── Profesores.jsx       # Directorio de docentes
+│   └── Estudiantes.jsx      # Registro y directorio de estudiantes
+├── supabase/
+│   └── client.js            # Cliente e inicialización de Supabase
+└── utils/
+    └── materiaColors.js     # Utilidad de codificación de colores por materia
 ```
 
 ---
 
-## Deploy en Vercel
+## 📜 Licencia
 
-1. Sube el repo a GitHub.
-2. Importa el proyecto en [Vercel](https://vercel.com/new).
-3. Framework preset: **Vite** · Build: `npm run build` · Output: `dist`.
-4. Agrega las env vars `VITE_SUPABASE_URL` y `VITE_SUPABASE_ANON_KEY`.
-5. Deploy → https://uni-admin.vercel.app
+Este proyecto se distribuye bajo la licencia **MIT**. Consulta el archivo `LICENSE` para obtener más información.
 
 ---
 
-## Descripción para GitHub
-
-```
-Dashboard de organización académica personal con React + Supabase: horarios, tareas, repositorio de PDFs, enlaces rápidos, calculadora de notas, profesores y estudiantes. Incluye autenticación, diseño responsive y CRUD en tiempo real.
-```
-
----
-
-## Licencia
-
-MIT
+<div align="center">
+  <sub>Desarrollado para simplificar la gestión universitaria. Usar con responsabilidad.</sub>
+</div>
