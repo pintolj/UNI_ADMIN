@@ -34,11 +34,13 @@ const estudiantesQuery = () =>
     .order('nombre', { ascending: true })
 
 const whatsappHref = (telefono) => {
-  const digits = (telefono ?? '').replace(/\D/g, '')
-  if (digits.length < 8) return null
-  const withCountryCode =
-    digits.length === 10 && !digits.startsWith('52') ? `52${digits}` : digits
-  return `https://wa.me/${withCountryCode}`
+  let digits = (telefono ?? '').replace(/\D/g, '')
+  if (digits.length < 7) return null
+  if (digits.startsWith('58')) {
+    digits = digits.slice(2)
+  }
+  digits = digits.replace(/^0+/, '')
+  return `https://wa.me/58${digits}`
 }
 
 export default function Estudiantes() {
@@ -523,7 +525,7 @@ export default function Estudiantes() {
                     required
                     value={form.telefono}
                     onChange={handleChange}
-                    placeholder="Ej. 55 1234 5678"
+                    placeholder="Ej. 0412 1234567"
                     className={inputClasses} autoComplete="off" autoCorrect="off" spellCheck="false" />
                 </div>
 
