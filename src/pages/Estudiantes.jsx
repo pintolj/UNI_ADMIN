@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import {
   GraduationCap,
   Loader2,
+  MessageCircle,
   Pencil,
   Plus,
   RefreshCw,
@@ -15,9 +16,10 @@ import { supabase } from '../supabase/client'
 const INITIAL_FORM = {
   nombre: '',
   apellido: '',
+  telefono: '',
+  carrera: '',
   matricula: '',
   email: '',
-  carrera: '',
   semestre: '',
 }
 
@@ -27,9 +29,17 @@ const inputClasses =
 const estudiantesQuery = () =>
   supabase
     .from('estudiantes')
-    .select('id, nombre, apellido, matricula, email, carrera, semestre')
+    .select('id, nombre, apellido, telefono, matricula, email, carrera, semestre')
     .order('apellido', { ascending: true })
     .order('nombre', { ascending: true })
+
+const whatsappHref = (telefono) => {
+  const digits = (telefono ?? '').replace(/\D/g, '')
+  if (digits.length < 8) return null
+  const withCountryCode =
+    digits.length === 10 && !digits.startsWith('52') ? `52${digits}` : digits
+  return `https://wa.me/${withCountryCode}`
+}
 
 export default function Estudiantes() {
   const [estudiantes, setEstudiantes] = useState([])
@@ -78,11 +88,13 @@ export default function Estudiantes() {
       const apellido = (estudiante.apellido ?? '').toLowerCase()
       const matricula = (estudiante.matricula ?? '').toLowerCase()
       const carrera = (estudiante.carrera ?? '').toLowerCase()
+      const telefono = (estudiante.telefono ?? '').toLowerCase()
       return (
         nombre.includes(term) ||
         apellido.includes(term) ||
         matricula.includes(term) ||
-        carrera.includes(term)
+        carrera.includes(term) ||
+        telefono.includes(term)
       )
     })
   }, [estudiantes, search])
@@ -111,9 +123,15 @@ export default function Estudiantes() {
 
     try {
       const payload = {
-        ...form,
-        semestre: Number(form.semestre),
+        nombre: form.nombre.trim(),
+        apellido: form.apellido.trim(),
+        telefono: form.telefono.trim(),
+        carrera: form.carrera.trim(),
       }
+
+      if (form.matricula.trim()) payload.matricula = form.matricula.trim()
+      if (form.email.trim()) payload.email = form.email.trim()
+      if (form.semestre !== '') payload.semestre = Number(form.semestre)
 
       const { error: insertError } = await supabase
         .from('estudiantes')
@@ -223,7 +241,7 @@ export default function Estudiantes() {
             type="search"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="Buscar por nombre, apellido, matrícula o carrera..."
+            placeholder="Buscar por nombre, apellido, matrícula, carrera o teléfono..."
             aria-label="Buscar estudiantes"
             autoComplete="off"
             autoCorrect="off"
@@ -268,12 +286,16 @@ export default function Estudiantes() {
                         {estudiante.nombre} {estudiante.apellido}
                       </p>
                       <div className="mt-1 flex flex-wrap gap-1.5">
-                        <span className="inline-flex rounded-full bg-slate-100 px-2 py-0.5 font-mono text-xs font-medium text-slate-700">
-                          {estudiante.matricula}
-                        </span>
-                        <span className="inline-flex rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700">
-                          {estudiante.semestre}º
-                        </span>
+                        {estudiante.matricula && (
+                          <span className="inline-flex rounded-full bg-slate-100 px-2 py-0.5 font-mono text-xs font-medium text-slate-700">
+                            {estudiante.matricula}
+                          </span>
+                        )}
+                        {estudiante.semestre && (
+                          <span className="inline-flex rounded-full bg-indigo-50 px-2 py-0.5 text-xs font-medium text-indigo-700">
+                            {estudiante.semestre}º
+                          </span>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -281,11 +303,24 @@ export default function Estudiantes() {
                   <dl className="mt-3 space-y-1 text-sm text-slate-600">
                     <div className="flex gap-2">
                       <dt className="font-medium text-slate-500">Carrera:</dt>
-                      <dd className="min-w-0">{estudiante.carrera}</dd>
+                      <dd className="min-w-0">{estudiante.carrera ?? '—'}</dd>
                     </div>
                     <div className="flex gap-2">
-                      <dt className="font-medium text-slate-500">Email:</dt>
-                      <dd className="min-w-0 break-all">{estudiante.email ?? '—'}</dd>
+                      <dt className="font-medium text-slate-500">Teléfono:</dt>
+                      <dd className="min-w-0 break-all">
+                        {whatsappHref(estudiante.telefono) ? (
+                          <a
+                            href={whatsappHref(estudiante.telefono)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="font-medium text-emerald-600 underline underline-offset-2 transition hover:text-emerald-700"
+                          >
+                            {estudiante.telefono}
+                          </a>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </dd>
                     </div>
                   </dl>
 
@@ -314,7 +349,7 @@ export default function Estudiantes() {
                     <th className="px-6 py-3 font-semibold">Nombre</th>
                     <th className="px-6 py-3 font-semibold">Apellido</th>
                     <th className="px-6 py-3 font-semibold">Matrícula</th>
-                    <th className="px-6 py-3 font-semibold">Email</th>
+                    <th className="px-6 py-3 font-semibold">Teléfono</th>
                     <th className="px-6 py-3 font-semibold">Carrera</th>
                     <th className="px-6 py-3 font-semibold">Semestre</th>
                     <th className="px-6 py-3 text-right font-semibold">
@@ -343,19 +378,35 @@ export default function Estudiantes() {
                       </td>
                       <td className="px-6 py-4">
                         <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-1 font-mono text-xs font-medium text-slate-700">
-                          {estudiante.matricula}
+                          {estudiante.matricula ?? '—'}
                         </span>
-                      </td>
-                      <td className="px-6 py-4 text-slate-600">
-                        {estudiante.email ?? '—'}
-                      </td>
-                      <td className="px-6 py-4 text-slate-600">
-                        {estudiante.carrera}
                       </td>
                       <td className="px-6 py-4">
-                        <span className="inline-flex rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700">
-                          {estudiante.semestre}º
-                        </span>
+                        {whatsappHref(estudiante.telefono) ? (
+                          <a
+                            href={whatsappHref(estudiante.telefono)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1.5 font-medium text-emerald-600 underline underline-offset-2 transition hover:text-emerald-700"
+                          >
+                            <MessageCircle className="h-4 w-4" />
+                            {estudiante.telefono}
+                          </a>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-slate-600">
+                        {estudiante.carrera ?? '—'}
+                      </td>
+                      <td className="px-6 py-4">
+                        {estudiante.semestre ? (
+                          <span className="inline-flex rounded-full bg-indigo-50 px-2.5 py-1 text-xs font-medium text-indigo-700">
+                            {estudiante.semestre}º
+                          </span>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
                       </td>
                       <td className="px-6 py-4 text-right">
                         <button
@@ -404,7 +455,8 @@ export default function Estudiantes() {
                   Agregar Estudiante
                 </h2>
                 <p className="mt-1 text-sm text-slate-500">
-                  Completa los datos del nuevo estudiante.
+                  Nombre, apellido, teléfono y carrera son obligatorios; el
+                  resto es opcional.
                 </p>
               </div>
               <button
@@ -459,78 +511,101 @@ export default function Estudiantes() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <div>
                   <label
-                    htmlFor="matricula"
+                    htmlFor="telefono"
                     className="mb-1.5 block text-sm font-medium text-slate-700"
                   >
-                    Matrícula / Carné
+                    Teléfono
                   </label>
                   <input
-                    id="matricula"
-                    name="matricula"
-                    type="text"
+                    id="telefono"
+                    name="telefono"
+                    type="tel"
                     required
-                    value={form.matricula}
+                    value={form.telefono}
                     onChange={handleChange}
-                    placeholder="Ej. 2024-00123"
+                    placeholder="Ej. 55 1234 5678"
                     className={inputClasses} autoComplete="off" autoCorrect="off" spellCheck="false" />
                 </div>
 
                 <div>
                   <label
-                    htmlFor="semestre"
+                    htmlFor="carrera"
                     className="mb-1.5 block text-sm font-medium text-slate-700"
                   >
-                    Semestre
+                    Carrera
                   </label>
                   <input
-                    id="semestre"
-                    name="semestre"
-                    type="number"
+                    id="carrera"
+                    name="carrera"
+                    type="text"
                     required
-                    min="1"
-                    max="12"
-                    value={form.semestre}
+                    value={form.carrera}
                     onChange={handleChange}
-                    placeholder="Ej. 3"
+                    placeholder="Ej. Ingeniería de Sistemas"
                     className={inputClasses} autoComplete="off" autoCorrect="off" spellCheck="false" />
                 </div>
               </div>
 
-              <div>
-                <label
-                  htmlFor="email"
-                  className="mb-1.5 block text-sm font-medium text-slate-700"
-                >
-                  Email
-                </label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  required
-                  value={form.email}
-                  onChange={handleChange}
-                  placeholder="carlos.ramirez@estudiantes.edu"
-                  className={inputClasses} autoComplete="off" autoCorrect="off" spellCheck="false" />
-              </div>
+              <fieldset className="space-y-4 rounded-xl border border-dashed border-slate-300 p-4">
+                <legend className="px-1 text-sm font-semibold text-slate-500">
+                  Datos adicionales (opcional)
+                </legend>
 
-              <div>
-                <label
-                  htmlFor="carrera"
-                  className="mb-1.5 block text-sm font-medium text-slate-700"
-                >
-                  Carrera
-                </label>
-                <input
-                  id="carrera"
-                  name="carrera"
-                  type="text"
-                  required
-                  value={form.carrera}
-                  onChange={handleChange}
-                  placeholder="Ej. Ingeniería de Sistemas"
-                  className={inputClasses} autoComplete="off" autoCorrect="off" spellCheck="false" />
-              </div>
+                <div className="grid gap-4 sm:grid-cols-2">
+                  <div>
+                    <label
+                      htmlFor="matricula"
+                      className="mb-1.5 block text-sm font-medium text-slate-700"
+                    >
+                      Matrícula / Carné
+                    </label>
+                    <input
+                      id="matricula"
+                      name="matricula"
+                      type="text"
+                      value={form.matricula}
+                      onChange={handleChange}
+                      placeholder="Ej. 2024-00123"
+                      className={inputClasses} autoComplete="off" autoCorrect="off" spellCheck="false" />
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="semestre"
+                      className="mb-1.5 block text-sm font-medium text-slate-700"
+                    >
+                      Semestre
+                    </label>
+                    <input
+                      id="semestre"
+                      name="semestre"
+                      type="number"
+                      min="1"
+                      max="12"
+                      value={form.semestre}
+                      onChange={handleChange}
+                      placeholder="Ej. 3"
+                      className={inputClasses} autoComplete="off" autoCorrect="off" spellCheck="false" />
+                  </div>
+                </div>
+
+                <div>
+                  <label
+                    htmlFor="email"
+                    className="mb-1.5 block text-sm font-medium text-slate-700"
+                  >
+                    Email
+                  </label>
+                  <input
+                    id="email"
+                    name="email"
+                    type="email"
+                    value={form.email}
+                    onChange={handleChange}
+                    placeholder="carlos.ramirez@estudiantes.edu"
+                    className={inputClasses} autoComplete="off" autoCorrect="off" spellCheck="false" />
+                </div>
+              </fieldset>
 
               <div className="flex flex-col gap-3 pt-2 sm:flex-row sm:justify-end">
                 <button
