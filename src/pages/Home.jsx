@@ -61,11 +61,20 @@ const PRIORIDAD_STYLES = {
   baja: 'bg-emerald-100 text-emerald-700 ring-emerald-200',
 }
 
-const START_HOUR = 8
-const END_HOUR = 20
-const HOURS = Array.from(
-  { length: END_HOUR - START_HOUR },
-  (_, i) => START_HOUR + i
+const START_HOUR = 7
+const END_HOUR = 13
+const SLOT_MINUTES = 30
+const GRID_SLOTS = Array.from(
+  { length: ((END_HOUR - START_HOUR) * 60) / SLOT_MINUTES },
+  (_, index) => {
+    const minutes = START_HOUR * 60 + index * SLOT_MINUTES
+    return {
+      minutes,
+      hour: Math.floor(minutes / 60),
+      minute: minutes % 60,
+      isFullHour: minutes % 60 === 0,
+    }
+  }
 )
 
 const pad = (n) => String(n).padStart(2, '0')
@@ -112,7 +121,13 @@ const timeToMinutes = (value) => {
   return h * 60 + (m || 0)
 }
 
-const formatHourLabel = (hour) => `${pad(hour)}:00`
+const formatSlotLabel = (slot) => `${pad(slot.hour)}:${pad(slot.minute)}`
+
+const slotIndexOf = (minutes) =>
+  Math.floor((minutes - START_HOUR * 60) / SLOT_MINUTES)
+
+const slotEndIndexOf = (minutes) =>
+  Math.ceil((minutes - START_HOUR * 60) / SLOT_MINUTES)
 
 const formatFechaHoraCorta = (fecha, hora) => {
   const fechaTexto = formatFechaCorta(fecha)
@@ -249,38 +264,95 @@ const applyDashboardResults = ({
 function buildGridPlacement(horarios) {
   const gridStart = START_HOUR * 60
   const gridEnd = END_HOUR * 60
+  const lastSlot = GRID_SLOTS.length
 
-  return horarios
+  const items = horarios
     .map((clase) => {
       const dayIndex = DIAS_CLASES.indexOf(clase.dia_semana)
-      const startMin = timeToMinutes(clase.hora_inicio)
-      const endMin = timeToMinutes(clase.hora_fin)
+      const rawStart = timeToMinutes(clase.hora_inicio)
+      const rawEnd = timeToMinutes(clase.hora_fin)
 
-      if (dayIndex < 0 || startMin === null) return null
-      if (startMin < gridStart || startMin >= gridEnd) return null
+      if (dayIndex < 0 || rawStart === null) return null
 
-      const clampedEnd =
-        endMin === null || endMin <= startMin
+      const startMin = Math.max(rawStart, gridStart)
+      const endMin =
+        rawEnd === null || rawEnd <= rawStart
           ? Math.min(startMin + 60, gridEnd)
-          : Math.min(endMin, gridEnd)
+          : Math.min(rawEnd, gridEnd)
 
-      const startRowOffset = Math.floor((startMin - gridStart) / 60)
-      const span = Math.max(
-        1,
-        Math.ceil((clampedEnd - (gridStart + startRowOffset * 60)) / 60)
+      if (startMin >= gridEnd) return null
+
+      const startSlot = Math.max(0, slotIndexOf(startMin))
+      const endSlot = Math.min(
+        lastSlot,
+        Math.max(slotEndIndexOf(endMin), startSlot + 1)
       )
-      const maxSpan = HOURS.length - startRowOffset
-      const rowSpan = Math.min(span, maxSpan)
 
       return {
         ...clase,
         dayIndex,
-        gridRow: 2 + startRowOffset,
-        rowSpan,
+        startSlot,
+        endSlot,
+        lane: 0,
+        lanes: 1,
+        gridRow: 2 + startSlot,
+        rowSpan: endSlot - startSlot,
         gridColumn: 2 + dayIndex,
       }
     })
     .filter(Boolean)
+
+  const byDay = new Map()
+  items.forEach((clase) => {
+    const list = byDay.get(clase.dayIndex) ?? []
+    list.push(clase)
+    byDay.set(clase.dayIndex, list)
+  })
+
+  byDay.forEach((list) => {
+    list.sort((a, b) => a.startSlot - b.startSlot || a.endSlot - b.endSlot)
+
+    let cluster = []
+    let laneEnds = []
+
+    const flushCluster = () => {
+      if (!cluster.length) return
+      const lanes = laneEnds.length || 1
+      cluster.forEach((clase) => {
+        clase.lanes = lanes
+      })
+      cluster = []
+      laneEnds = []
+    }
+
+    list.forEach((clase) => {
+      const clusterFree =
+        cluster.length === 0 ||
+        clase.startSlot >= Math.max(...laneEnds)
+
+      if (!clusterFree) {
+        let lane = laneEnds.findIndex((end) => end <= clase.startSlot)
+        if (lane === -1) {
+          lane = laneEnds.length
+          laneEnds.push(clase.endSlot)
+        } else {
+          laneEnds[lane] = clase.endSlot
+        }
+        clase.lane = lane
+        cluster.push(clase)
+        return
+      }
+
+      flushCluster()
+      clase.lane = 0
+      laneEnds = [clase.endSlot]
+      cluster = [clase]
+    })
+
+    flushCluster()
+  })
+
+  return items
 }
 
 function DecorativeFrame({ children }) {
@@ -403,12 +475,12 @@ function WeeklyGrid({ horarios, diaHoy }) {
         )}
       </div>
 
-      <div className="hidden overflow-x-auto md:block">
+      <div className="hidden w-full max-w-full overflow-x-hidden md:block">
         <div
-          className="grid min-w-[720px] gap-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-inner"
+          className="grid w-full max-w-full gap-0 overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-inner"
           style={{
-            gridTemplateColumns: `72px repeat(${DIAS_CLASES.length}, minmax(0, 1fr))`,
-            gridTemplateRows: `auto repeat(${HOURS.length}, minmax(76px, auto))`,
+            gridTemplateColumns: `64px repeat(${DIAS_CLASES.length}, minmax(0, 1fr))`,
+            gridTemplateRows: `auto repeat(${GRID_SLOTS.length}, minmax(38px, auto))`,
           }}
         >
           <div className="border-b border-r border-slate-200 bg-slate-50" />
@@ -422,10 +494,10 @@ function WeeklyGrid({ horarios, diaHoy }) {
             return (
               <div
                 key={dia}
-                className="border-b border-r border-slate-200 bg-slate-50 p-2 last:border-r-0"
+                className="border-b border-r border-slate-200 bg-slate-50 px-1.5 py-1.5 last:border-r-0"
               >
                 <div
-                  className={`mx-auto rounded-full border px-3 py-1.5 text-center text-xs font-bold uppercase tracking-wide shadow-sm sm:text-sm ${tabStyle} ${
+                  className={`mx-auto rounded-full border px-2 py-1 text-center text-[11px] font-bold uppercase leading-tight tracking-wide shadow-sm sm:text-xs ${tabStyle} ${
                     isHoy ? 'ring-2 ring-indigo-500 ring-offset-2' : ''
                   }`}
                 >
@@ -440,23 +512,33 @@ function WeeklyGrid({ horarios, diaHoy }) {
             )
           })}
 
-          {HOURS.map((hour, index) => (
+          {GRID_SLOTS.map((slot, index) => (
             <div
-              key={hour}
-              className="flex items-start justify-end border-b border-r border-slate-200 bg-slate-50 px-2 py-2"
+              key={slot.minutes}
+              className={`flex items-start justify-end border-b border-r border-slate-200 bg-slate-50 px-1.5 ${
+                slot.isFullHour ? 'pt-1.5' : 'pt-0.5'
+              }`}
               style={{ gridColumn: 1, gridRow: 2 + index }}
             >
-              <span className="text-[11px] font-semibold text-slate-500">
-                {formatHourLabel(hour)}
+              <span
+                className={
+                  slot.isFullHour
+                    ? 'text-[11px] font-semibold text-slate-500'
+                    : 'text-[10px] font-medium text-slate-400'
+                }
+              >
+                {formatSlotLabel(slot)}
               </span>
             </div>
           ))}
 
-          {HOURS.map((hour, rowIndex) =>
+          {GRID_SLOTS.map((slot, rowIndex) =>
             DIAS_CLASES.map((dia, dayIdx) => (
               <div
-                key={`${dia}-${hour}`}
-                className="border-b border-r border-slate-100 last:border-r-0"
+                key={`${dia}-${slot.minutes}`}
+                className={`border-b border-r border-slate-100 last:border-r-0 ${
+                  slot.isFullHour ? 'bg-slate-50/40' : ''
+                }`}
                 style={{
                   gridColumn: 2 + dayIdx,
                   gridRow: 2 + rowIndex,
@@ -467,26 +549,37 @@ function WeeklyGrid({ horarios, diaHoy }) {
 
           {placed.map((clase) => {
             const colorClass = getMateriaBlockClass(clase.materia)
+            const lanes = clase.lanes || 1
+            const lane = clase.lane || 0
+            const showAula = clase.rowSpan >= 2 && Boolean(clase.aula)
+            const showHora = clase.rowSpan >= 3
 
             return (
               <div
                 key={clase.id}
-                className={`z-10 m-1 flex flex-col items-center justify-center rounded-xl border px-2 py-2 text-center shadow-sm transition ${colorClass}`}
+                className={`z-10 flex min-h-0 flex-col items-center justify-center overflow-hidden rounded-xl border px-1.5 py-1 text-center shadow-sm transition ${colorClass}`}
                 style={{
                   gridColumn: clase.gridColumn,
                   gridRow: `${clase.gridRow} / span ${clase.rowSpan}`,
+                  width: `calc(100% / ${lanes} - 6px)`,
+                  marginLeft: `calc(${lane} * 100% / ${lanes} + 3px)`,
+                  marginRight: '3px',
                 }}
                 title={`${clase.materia} · ${clase.hora_inicio}–${clase.hora_fin} · ${clase.aula}`}
               >
-                <span className="text-xs font-bold leading-tight sm:text-sm">
+                <span className="w-full truncate text-[11px] font-bold leading-tight sm:text-xs">
                   {clase.materia}
                 </span>
-                <span className="mt-1 rounded-md bg-white/70 px-1.5 py-0.5 text-[10px] font-semibold text-slate-700">
-                  {clase.aula}
-                </span>
-                <span className="mt-0.5 text-[10px] opacity-75">
-                  {clase.hora_inicio}–{clase.hora_fin}
-                </span>
+                {showAula && (
+                  <span className="mt-1 max-w-full truncate rounded-md bg-white/70 px-1.5 py-0.5 text-[10px] font-semibold text-slate-700">
+                    {clase.aula}
+                  </span>
+                )}
+                {showHora && (
+                  <span className="mt-0.5 text-[10px] leading-tight opacity-75">
+                    {clase.hora_inicio}–{clase.hora_fin}
+                  </span>
+                )}
               </div>
             )
           })}
